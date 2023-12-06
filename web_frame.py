@@ -4,6 +4,7 @@ from urllib import parse
 
 from aiohttp import web
 
+from apis import APIError
 
 
 def get(path):
@@ -154,7 +155,7 @@ def add_route(app, fn):
     app.router.add_route(method, path, RequestHandler(app, fn))
 
 
-def add_route(app, module_name):
+def add_routes(app, module_name):
     n = module_name.rfind('.')
     if n == (-1):
         mod = __import__(module_name, globals(), locals(()))
