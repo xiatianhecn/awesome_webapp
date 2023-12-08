@@ -28,7 +28,6 @@ async def create_pool(loop, **kw):
 
 
 
-
 # Select
 # 要执行SELECT语句，我们用select函数执行，需要传入SQL语句和SQL参数：
 async def select(sql, args, size=None):
@@ -50,7 +49,7 @@ async def select(sql, args, size=None):
 # 因为这3种SQL的执行都需要相同的参数，以及返回一个整数表示影响的行数：
 async def execute(sql, args, autocommit=True):
     log(sql)
-    async with __pool.get() as conn:
+    async with (await __pool) as conn:
         if not autocommit:
             await conn.begin()
         try:
@@ -163,6 +162,7 @@ class ModelMetaclass(type):
         attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
         return type.__new__(cls, name, bases, attrs)
+
 class Model(dict, metaclass=ModelMetaclass):
 
     def __init__(self, **kw):

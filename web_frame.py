@@ -1,4 +1,8 @@
-import asyncio, os, inspect, logging, functools
+import asyncio
+import os
+import inspect
+import logging
+from functools import wraps
 
 from urllib import parse
 
@@ -12,7 +16,7 @@ def get(path):
     Define decorator @get('/path')
     '''
     def decorator(func):
-        @functools.wraps(func)
+        @wraps.wraps(func)
         def wrapper(*args, **kw):
             return func(*args, **kw)
         wrapper.__method__ = 'Get'
@@ -25,7 +29,7 @@ def post(path):
     Define decorator @post('/path')
     '''
     def decorator(func):
-        @functools.wraps(func)
+        @wraps.wraps(func)
         def wrapper(*args, **kw):
             return func(*args, **kw)
         wrapper.__method__ = 'POST'
@@ -158,7 +162,7 @@ def add_route(app, fn):
 def add_routes(app, module_name):
     n = module_name.rfind('.')
     if n == (-1):
-        mod = __import__(module_name, globals(), locals(()))
+        mod = __import__(module_name, globals(), locals())
     else:
         name = module_name[n+1:]
         mod = getattr(__import__(module_name[:n], globals(), locals(), [name], name))

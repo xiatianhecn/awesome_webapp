@@ -1,12 +1,15 @@
 -- schema.sql
 
-drop database if exists awesome;
+DROP DATABASE IF EXISTS awesome;
 
-create database awesome;
+CREATE DATABASE awesome;
 
-use awesome;
+USE awesome;
 
-grant select, insert, update, delete on awesome.* to 'www-data'@'localhost' identified by 'www-data';
+create user 'www-data'@'localhost' identified by 'www-data';
+grant select, insert, update, delete on awesome.* to 'www-data'@'localhost' with grant option;
+
+-- 没有创建新的用户，无需授权
 
 create table users (
     `id` varchar(50) not null,
