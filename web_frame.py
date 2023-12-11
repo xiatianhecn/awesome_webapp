@@ -2,7 +2,7 @@ import asyncio
 import os
 import inspect
 import logging
-from functools import wraps
+import functools
 
 from urllib import parse
 
@@ -12,11 +12,11 @@ from apis import APIError
 
 
 def get(path):
-    '''
+    """
     Define decorator @get('/path')
-    '''
+    """
     def decorator(func):
-        @wraps.wraps(func)
+        @functools.wraps(func)
         def wrapper(*args, **kw):
             return func(*args, **kw)
         wrapper.__method__ = 'Get'
@@ -25,11 +25,11 @@ def get(path):
     return decorator
 
 def post(path):
-    '''
+    """
     Define decorator @post('/path')
-    '''
+    """
     def decorator(func):
-        @wraps.wraps(func)
+        @functools.wraps(func)
         def wrapper(*args, **kw):
             return func(*args, **kw)
         wrapper.__method__ = 'POST'
@@ -82,8 +82,8 @@ def has_request_arg(fn):
 
 class RequestHandler(object):
     def __init__(self, app, fn):
-        self.__app__ = app
-        self.__func__ = fn
+        self._app = app
+        self._func = fn
         self._has_request_arg = has_request_arg(fn)
         self._has_var_kw_arg = has_var_kw_arg(fn)
         self._has_named_kw_args = has_named_kw_args(fn)
@@ -153,8 +153,7 @@ def add_route(app, fn):
     path = getattr(fn, '__route__', None)
     if path is None or method is None:
         raise ValueError('@get or @post not defined in %s.' % str(fn))
-    if not asyncio.iscoroutinefunction(fn) and not inspect.isgeneratorfunction(fn):
-        fn = asyncio.coroutine(fn)
+    
     logging.info('add route %s %s => %s(%s)' % (method, path, fn.__name__, ','.join(inspect.signature(fn).parameters.keys())))
     app.router.add_route(method, path, RequestHandler(app, fn))
 
@@ -165,7 +164,7 @@ def add_routes(app, module_name):
         mod = __import__(module_name, globals(), locals())
     else:
         name = module_name[n+1:]
-        mod = getattr(__import__(module_name[:n], globals(), locals(), [name], name))
+        mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
     for attr in dir(mod):
         if attr.startswith('_'):
             continue

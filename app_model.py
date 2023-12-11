@@ -15,7 +15,7 @@ from datetime import datetime
 from aiohttp import web
 from jinja2 import Environment, FileSystemLoader
 
-import orm
+import orm_model
 from web_frame_model import add_routes, add_static
 
 def init_jinja2(app, **kw):
@@ -110,7 +110,7 @@ def datetime_filter(t):
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www', password='www', db='awesome')
+    await orm_model.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www', password='www', db='awesome')
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])
