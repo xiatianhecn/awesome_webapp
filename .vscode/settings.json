@@ -1,6 +1,6 @@
 {
     "python.analysis.autoImportCompletions": false,
-    "workbench.colorTheme": "Light Pink",
+    "workbench.colorTheme": "GitHub Dark",
     "workbench.activityBar.iconClickBehavior": "toggle",
     "python.testing.pytestArgs": [
         "."
