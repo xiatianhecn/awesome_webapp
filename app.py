@@ -10,7 +10,7 @@ from config import configs
 
 import orm_test
 from web_frame import add_routes, add_static
-
+from handlers import cookie2user, COOKIE_NAME
 
 
 def init_jinja2(app, **kw):
@@ -35,34 +35,30 @@ def init_jinja2(app, **kw):
     app['__templating__'] = env
 
 
+## 以下是middleware,可以把通用的功能从每个URL处理函数中拿出来集中放到一个地方
+## URL处理日志工厂
 async def logger_factory(app, handler):
     async def logger(request):
-        # write down the log
         logging.info('Request: %s %s' % (request.method, request.path))
-        # continue other request
         return (await handler(request))
     return logger
 
 # 认证处理工厂--把当前用户绑定到request上，并对URL/manage/进行拦截，
 # 检查当前用户是否是管理员身份
-# 需要handlers.py的支持, 当handlers.py在API章节里完全编辑完
-# 再将下面代码的双井号去掉
-
-#async def auth_factory(app, handler):
-#    async def auth(request):
-#        logging.info('check user: %s %s' % (request.method, request.path))
-#        request.__user__ = None
-#        cookie_str = request.cookies.get(COOKIE_NAME)
-#        if cookie_str:
-#            user = await cookie2user(cookie_str)
-#            if user:
-#                logging.info('set current user: %s' % user.email)
-#                request.__user__ = user
-#        if request.path.startswith('/manage/') and 
-#           (request.__user__ is None or not request.__user__.admin):
-#            return web.HTTPFound('/signin')
-#        return (await handler(request))
-#    return auth
+async def auth_factory(app, handler):
+    async def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path))
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME)
+        if cookie_str:
+            user = await cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
+            return web.HTTPFound('/signin')
+        return (await handler(request))
+    return auth
 
 # 数据处理工厂
 async def data_factory(app, handler):
@@ -137,17 +133,20 @@ def datetime_filter(t):
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm_test.create_pool(loop=loop, **configs['db'])
-    app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+    await orm_test.create_pool(loop=loop, **configs.db)
+    app = web.Application(middlewares=[
+        logger_factory, auth_factory, response_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
     add_static(app)
-    srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
-    logging.info('server started at http://127.0.0.1:9000...')
-    return srv
+    runner = web.AppRunner(app)
+    await runner.setup()
+    srv = web.TCPSite(runner, 'localhost', 9000)
+    logging.info('server started at http://localhost:9000...')
+    await srv.start()
 
-loop = asyncio.new_event_loop()
-loop.run_until_complete(init(loop))
-loop.run_forever()
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(init(loop))
+    loop.run_forever()
