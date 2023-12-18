@@ -29,6 +29,8 @@ async def create_pool(loop, **kw):
     )
 
 
+
+
 # Select
 # 要执行SELECT语句，我们用select函数执行，需要传入SQL语句和SQL参数：
 async def select(sql, args, size=None):
@@ -49,19 +51,21 @@ async def select(sql, args, size=None):
 # Insert, Update, Delete
 # 要执行INSERT、UPDATE、DELETE语句，可以定义一个通用的execute()函数，
 # 因为这3种SQL的执行都需要相同的参数，以及返回一个整数表示影响的行数：
-async def execute(sql, args):
+async def execute(sql, args, autocommit=True):
     log(sql)
-    global __pool
-    with (await __pool) as conn:
+    async with __pool.get() as conn:
+        if not autocommit:
+            await conn.begin()
         try:
-            cur = await conn.cursor()
-            await cur.execute(sql.replace('?', '%s'), args)
-            affected = cur.rowcount
-            await cur.close()
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(sql.replace('?', '%s'), args)
+                affected = cur.rowcount
+            if not autocommit:
+                await conn.commit()
         except BaseException as e:
+            if not autocommit:
+                await conn.rollback()
             raise
-        finally:
-            conn.close()
         return affected
 
 class ModelMetaclass(type):
