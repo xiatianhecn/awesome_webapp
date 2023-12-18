@@ -1,4 +1,6 @@
-import logging; logging.basicConfig(level=logging.INFO)
+import logging;
+
+logging.basicConfig(level=logging.INFO)
 
 import asyncio, os, json, time
 from datetime import datetime
@@ -16,12 +18,12 @@ from handlers import cookie2user, COOKIE_NAME
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
     options = dict(
-        autoescape = kw.get('autoescape', True),
-        block_start_string = kw.get('block_start_string', '{%'),
-        block_end_string = kw.get('block_end_string', '%}'),
-        variable_start_string = kw.get('variable_start_string', '{{'),
-        variable_end_string = kw.get('variable_end_string', '}}'),
-        auto_reload = kw.get('auto_reload', True)
+        autoescape=kw.get('autoescape', True),
+        block_start_string=kw.get('block_start_string', '{%'),
+        block_end_string=kw.get('block_end_string', '%}'),
+        variable_start_string=kw.get('variable_start_string', '{{'),
+        variable_end_string=kw.get('variable_end_string', '}}'),
+        auto_reload=kw.get('auto_reload', True)
     )
     path = kw.get('path', None)
     if path is None:
@@ -40,8 +42,10 @@ def init_jinja2(app, **kw):
 async def logger_factory(app, handler):
     async def logger(request):
         logging.info('Request: %s %s' % (request.method, request.path))
-        return (await handler(request))
+        return await handler(request)
+
     return logger
+
 
 # 认证处理工厂--把当前用户绑定到request上，并对URL/manage/进行拦截，
 # 检查当前用户是否是管理员身份
@@ -57,8 +61,10 @@ async def auth_factory(app, handler):
                 request.__user__ = user
         if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
             return web.HTTPFound('/signin')
-        return (await handler(request))
+        return await handler(request)
+
     return auth
+
 
 # 数据处理工厂
 async def data_factory(app, handler):
@@ -70,10 +76,12 @@ async def data_factory(app, handler):
             elif request.content_type.startswith('application/x-www-form-urlencoded'):
                 request.__data__ = await request.post()
                 logging.info('request form: %s' % str(request.__data__))
-        return (await handler(request))
+        return await handler(request)
+
     return parse_data
 
 
+## 响应返回处理工厂
 async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler...')
@@ -93,7 +101,8 @@ async def response_factory(app, handler):
         if isinstance(r, dict):
             template = r.get('__template__')
             if template is None:
-                resp = web.Response(body=json.dumps(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
+                resp = web.Response(
+                    body=json.dumps(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
                 resp.content_type = 'application/json;charset=utf-8'
                 return resp
             else:
@@ -102,22 +111,18 @@ async def response_factory(app, handler):
                 resp.content_type = 'text/html;charset=utf-8'
                 return resp
         if isinstance(r, int) and 100 <= r < 600:
-            return web.Response
-            # 若响应结果为元组,并且长度为2
+            return web.Response(r)
         if isinstance(r, tuple) and len(r) == 2:
             t, m = r
-            # t为http状态码,m为错误描述
-            # 判断t是否满足100~600的条件
             if isinstance(t, int) and 100 <= t < 600:
-                # 返回状态码与错误描述
                 return web.Response(t, str(m))
-            # 默认以字符串形式返回响应结果,设置类型为普通文本
-        resp = web.Response(body=str(r).encode("utf-8"))
-        resp.content_type = "text/plain;charset=utf-8"
+        # default:
+        resp = web.Response(body=str(r).encode('utf-8'))
+        resp.content_type = 'text/plain;charset=utf-8'
         return resp
-        # 上面6个if其实只用到了一个，准确的说只用到了半个。大家可以把用到的代码找出来，把没有用到的注释掉，如果程序能正常运行，那我觉得任务也就完成了
-        # 没用到的if语句块了解一下就好，等用到了再回过头来看，你就瞬间理解了。（这两条注释是我自己加的）
+
     return response
+
 
 def datetime_filter(t):
     delta = int(time.time() - t)
@@ -131,6 +136,7 @@ def datetime_filter(t):
         return u'%s天前' % (delta // 86400)
     dt = datetime.fromtimestamp(t)
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
+
 
 async def init(loop):
     await orm_test.create_pool(loop=loop, **configs.db)
@@ -146,9 +152,9 @@ async def init(loop):
     logging.info('server started at http://localhost:9000...')
     await srv.start()
 
+
 if __name__ == '__main__':
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init(loop))
     loop.run_forever()
-    
